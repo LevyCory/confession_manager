@@ -16,9 +16,9 @@ from oauth2client.file import Storage
 
 # ==================================================== CONSTANTS ===================================================== #
 
-CREDENTIALS_FILE_PATH = ""
+CREDENTIALS_FILE_PATH = os.path.expanduser("~/client_secret.json")
 CONFESSION_SHEET_ID = "1eyPP0nEnivMe9fS_y1Z8EKwY02f8rETxKK1RmaRlKYs"
-READY_CONFESSIONS_A1_FORMAT = "Form Responses 1!B:C"
+READY_CONFESSIONS_A1_FORMAT = "Form Responses 1!A:C"
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 APPLICATION_NAME = 'Confession Manager'
 
@@ -28,6 +28,9 @@ ARCHIVE_RANGE = "Archive!A:C"
 
 RAW_INPUT_OPTION = "RAW"
 PARSE_DATA_INPUT_OPTION = "USER_ENTERED"
+
+DATE_PUBLISHED_DICT_KEY = "Date Published"
+CONFESSION_DICT_KEY = "Confession"
 
 # ===================================================== CLASSES ====================================================== #
 
@@ -42,8 +45,7 @@ class Sheet(object):
         @type sheet_id: str
         """
         # Load credentials file
-        store = self._get_credentials()
-        self.credentials = store.get()
+        self.credentials = self._get_credentials()
         self.id = sheet_id
 
         # Create the connection to Google Sheets
@@ -51,28 +53,28 @@ class Sheet(object):
         discovery_url = (SHEETS_API_URL)
         self.service = discovery.build('sheets', 'v4', http=self.connection, discoveryServiceUrl=discovery_url)
 
-    def _get_credentials():
-        """Gets valid user credentials from storage.
-
-        If nothing has been stored, or if the stored credentials are invalid,
-        the OAuth2 flow is completed to obtain the new credentials.
-
-        Returns:
-            Credentials, the obtained credential.
+    def _get_credentials(self):
         """
+        Gets valid user credentials from storage. If nothing has been stored, or if the stored credentials are invalid,
+        the OAuth2 flow is completed to obtain the new credentials.
+        @return: The obtained credentials.
+        @rtype
+        """
+        # Make sure the credentials directory exists
         home_dir = os.path.expanduser('~')
         credential_dir = os.path.join(home_dir, '.credentials')
         if not os.path.exists(credential_dir):
             os.makedirs(credential_dir)
         credential_path = os.path.join(credential_dir, "google_sheets.json")
 
+        # Try loading credentials from file
         store = Storage(credential_path)
         credentials = store.get()
         if not credentials or credentials.invalid:
+            # Perform authentication
             flow = client.flow_from_clientsecrets(CREDENTIALS_FILE_PATH, SCOPES)
             flow.user_agent = APPLICATION_NAME
-            # TODO: Check if it breaks the code
-            credentials = tools.run(flow, store)
+            credentials = tools.run_flow(flow, store)
 
         return credentials
 
@@ -116,21 +118,33 @@ class Sheet(object):
                 }
             }
         }
+        raise NotImplementedError
 
 
 class ConfessionsSheet(Sheet):
     """
+    A sheet object tailored specifically for the confession spreadsheet.
     """
     def get_ready_confessions(self):
         """
+        Return the confessions marked for publishing
         """
         raw_confessions = self.get_data(READY_CONFESSIONS_A1_FORMAT)
 
         # Check if the confession is marked for publishing
         confessions = [confession for confession in raw_confessions if len(confession) > 1]
-        return confessions
+        
+        processed_confessions = []
+        for confession in confessions:
+            data = {}
+            data[DATE_PUBLISHED_DICT_KEY] = confession[0]
+            data[CONFESSION_DICT_KEY] = confession[1]
+            
+            processed_confessions.append(data)
 
-    def archive_confession(self, date_received, date_published, confession):
+        return processed_confessions
+
+    def add_to_archive(self, date_received, date_published, confession):
         """
         """
         row = [date_received, date_published, confession]
