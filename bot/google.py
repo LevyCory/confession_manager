@@ -1,3 +1,5 @@
+#! /usr/bin/python
+# -*- encoding: utf-8 -*-
 # ==================================================================================================================== #
 # File          : google.py
 # Purpose       : A client for Google sheets, providing basic spreadsheet editing capabillities
@@ -171,8 +173,8 @@ class ConfessionsSheet(Sheet):
             # Confessions marked for publishing have a cell extra in their representing list
             if len(confession) == CONFESSION_READY_LENGTH:
                 data = {
-                    DATE_PUBLISHED_DICT_KEY: confession[DATE_RECEIVED_INDEX],
-                    CONFESSION_DICT_KEY: confession[CONFESSION_INDEX],
+                    DATE_PUBLISHED_DICT_KEY: confession[DATE_RECEIVED_INDEX].encode("utf-8"),
+                    CONFESSION_DICT_KEY: confession[CONFESSION_INDEX].encode("utf-8"),
                     LINE_NUMBER_DICT_KEY: number + 1
                 }
                 processed_confessions.append(data)
@@ -185,23 +187,18 @@ class ConfessionsSheet(Sheet):
         @param confessions: A list of confessions.
         @type confessions: list
         """
-        for confession in confessions:
-            self._add_confession_to_archive(confession)
-
+        self._add_confessions_to_archive(confessions)
         self._delete_confessions_from_pool(confessions)
 
-    def _add_confession_to_archive(self, confession):
+    def _add_confessions_to_archive(self, confessions):
         """
         Add a confession row to the archive.
         @param confession: The confession to archive.
         @type confession: dict
         """
         current_time = datetime.datetime.now()
-        row = [confession[DATE_PUBLISHED_DICT_KEY],
-               current_time.strftime(PUBLISHED_TIME_FORMAT),
-               confession[CONFESSION_DICT_KEY]]
-
-        self.add_row(list(row), ARCHIVE_RANGE)
+        data = [[conf[DATE_PUBLISHED_DICT_KEY], current_time.strftime(PUBLISHED_TIME_FORMAT), conf[CONFESSION_DICT_KEY]] for conf in confessions]
+        self.add_row(data, ARCHIVE_RANGE)
 
     def _delete_confessions_from_pool(self, confessions):
         """
@@ -210,4 +207,4 @@ class ConfessionsSheet(Sheet):
         @type confessions: dict
         """
         line_numbers = [confession[LINE_NUMBER_DICT_KEY] for confession in confessions]
-        self.delete_row(CONFESSION_SHEET_ID, line_numbers)
+        self.delete_rows(CONFESSION_SHEET_ID, line_numbers)
