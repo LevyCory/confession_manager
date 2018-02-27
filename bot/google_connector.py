@@ -31,7 +31,8 @@ CONFESSION_READY_LENGTH = 3
 ROWS_DIMENSION = "ROWS"
 READY_CONFESSIONS_A1_FORMAT = "Form Responses 1!A:C"
 ARCHIVE_RANGE = "Archive!A:C"
-PUBLISHED_TIME_FORMAT = "%m/%j/%Y %H:%M:%S"
+GRAVEYARD_RANGE = "Graveyard!A:C"
+PUBLISHED_TIME_FORMAT = "%m/%m/%Y %H:%M:%S"
 
 RAW_INPUT_OPTION = "RAW"
 PARSE_DATA_INPUT_OPTION = "USER_ENTERED"
@@ -42,6 +43,10 @@ LINE_NUMBER_DICT_KEY = "Line Number"
 
 DATE_RECEIVED_INDEX = 0
 CONFESSION_INDEX = 1
+
+GRAVEYARD_MODE = "x"
+ARCHIVE_MODE = "a"
+PUBLISH_MODE = "v"
 
 # ===================================================== CLASSES ====================================================== #
 
@@ -132,6 +137,9 @@ class Sheet(object):
         @param rows: The row numbers to delete.
         @type rows: list
         """
+        if len(rows) == 0:
+            return None
+
         # Sort in decending order and remove duplicates
         rows = sorted(list(set(rows)), reverse=True)
 
@@ -162,7 +170,10 @@ class ConfessionsSheet(Sheet):
     """
     A sheet object tailored specifically for the confession spreadsheet.
     """
-    def get_ready_confessions(self):
+    def __init__(self):
+        super(ConfessionsSheet, self).__init__(CONFESSIONS_SPREADSHEET_ID)
+
+    def get_confessions(self, mode):
         """
         Return the confessions marked for publishing
         """
@@ -171,13 +182,17 @@ class ConfessionsSheet(Sheet):
         processed_confessions = []
         for number, confession in enumerate(raw_confessions):
             # Confessions marked for publishing have a cell extra in their representing list
-            if len(confession) == CONFESSION_READY_LENGTH:
-                data = {
-                    DATE_PUBLISHED_DICT_KEY: confession[DATE_RECEIVED_INDEX].encode("utf-8"),
-                    CONFESSION_DICT_KEY: confession[CONFESSION_INDEX].encode("utf-8"),
-                    LINE_NUMBER_DICT_KEY: number + 1
-                }
-                processed_confessions.append(data)
+            try:
+                if confession[2].lower() == mode:
+                    data = {
+                        DATE_PUBLISHED_DICT_KEY: confession[DATE_RECEIVED_INDEX].encode("utf-8"),
+                        CONFESSION_DICT_KEY: confession[CONFESSION_INDEX].encode("utf-8"),
+                        LINE_NUMBER_DICT_KEY: number + 1
+                    }
+                    processed_confessions.append(data)
+
+            except IndexError:
+                continue
 
         return processed_confessions
 
@@ -190,15 +205,17 @@ class ConfessionsSheet(Sheet):
         self._add_confessions_to_archive(confessions)
         self._delete_confessions_from_pool(confessions)
 
-    def _add_confessions_to_archive(self, confessions):
+    def _add_confessions_to_table(self, confessions, data_range):
         """
         Add a confession row to the archive.
         @param confession: The confession to archive.
         @type confession: dict
+        @param data_range: The cell range to insert the data into. Must be in A1 format.
+        @type data_range: str
         """
         current_time = datetime.datetime.now()
         data = [[conf[DATE_PUBLISHED_DICT_KEY], current_time.strftime(PUBLISHED_TIME_FORMAT), conf[CONFESSION_DICT_KEY]] for conf in confessions]
-        self.add_row(data, ARCHIVE_RANGE)
+        self.add_row(data, data_range)
 
     def _delete_confessions_from_pool(self, confessions):
         """
