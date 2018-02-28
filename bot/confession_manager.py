@@ -11,7 +11,6 @@
 import os
 import time
 import pickle
-import Queue
 
 import google_connector
 import facebook_connector
@@ -23,58 +22,6 @@ PUBLISH_LIST_FILE_NAME = "confessions.json"
 FILE_NOT_FOUND_ERRNO = 2
 
 # ===================================================== CLASSES ====================================================== #
-
-
-class SerializableQueue(Queue.Queue):
-    """
-    A queue that can be easily written and read from the disk
-    """
-    def __init__(self, backup_file):
-        """
-        @param backup_file: A file to backup the queue to.
-        @type backup_file: str
-        """
-        super(SerializableQueue, self).__init__()
-        self.backup_file = backup_file
-
-        # Try restoring previous data if backup exists
-        try:
-            with open(self.backup_file, "r") as queue_file:
-                self.queue = pickle.load(queue_file)
-
-        except IOError as error:
-            if error.errno == FILE_NOT_FOUND_ERRNO:
-                # Create the backup file
-                try:
-                    open(self.backup_file, "w").close()
-                except IOError:
-                    pass
-
-    @property
-    def size(self):
-        """
-        @return: Number of elements in the queue.
-        @rtype: int
-        """
-        return len(self.queue)
-
-    def backup(self):
-        """
-        Back up the queue to the disk.
-        """
-        if self.size > 0:
-            with open(self.backup_file, "w") as queue_file:
-                pickle.dump(queue_file, self.queue)
-
-    def restore(self):
-        """
-        Restore queue from backup
-        """
-        try:
-            with open(self.backup_file, "r") as queue_file:
-                self.queue = pickle.load(queue_file)
-        except OSError:
-            pass
 
 
 class ConfessionManager(object):
@@ -91,7 +38,11 @@ class ConfessionManager(object):
         except OSError:
             pass
 
-        self.queue = SerializableQueue(self.backup_file)
+        try:
+            with open(self.backup_file, "r") as backup_file:
+                self.queue = pickle.load(backup_file)
+        except OSError:
+            self.queue = []
 
     def _process_spreadsheet(self):
         """
@@ -112,8 +63,8 @@ class ConfessionManager(object):
         """
         Publish the queue to IDF Confessions
         """
-        while not self.queue.empty():
-            self.page.post(self.queue.get())
+        for confession in self.queue:
+            self.page.post(confession)
             time.sleep(8)
 
     def run(self):
@@ -124,14 +75,13 @@ class ConfessionManager(object):
             while True:
                 try:
                     # Get confessions to post.
-                    ready_confessions = self._process_spreadsheet()
-                    self.queue.deque.extend(ready_confessions)
+                    self.queue = self._process_spreadsheet()
 
                     # Publish confessions
                     self._publish_queue()
 
                     # Archive confessions
-                    self.confessions.archive_confessions(ready_confessions)
+                    self.confessions.archive_confessions(self.queue)
 
                 except KeyboardInterrupt:
                     raise
@@ -143,7 +93,12 @@ class ConfessionManager(object):
                     time.sleep(60)
 
         except KeyboardInterrupt:
-            self.queue.backup()
+            if len(self.queue) != 0:
+                try:
+                    with open(self.backup_file, "w") as backup_file:
+                        json.dump(self.queue)
+                except OSError:
+                    pass
 
 
 if __name__ == "__main__":
