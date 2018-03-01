@@ -196,13 +196,13 @@ class ConfessionsSheet(Sheet):
 
         return processed_confessions
 
-    def archive_confessions(self, confessions):
+    def move_confessions(self, confessions, destinstaion):
         """
         Add confessions to the archive and delete them from the confession pool.
         @param confessions: A list of confessions.
         @type confessions: list
         """
-        self._add_confessions_to_archive(confessions)
+        self._add_confessions_to_table(confessions, destinstaion)
         self._delete_confessions_from_pool(confessions)
 
     def _add_confessions_to_table(self, confessions, data_range):

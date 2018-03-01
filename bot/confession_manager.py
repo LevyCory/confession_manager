@@ -13,6 +13,7 @@ import time
 import pickle
 
 import google_connector
+from google_connector import ARCHIVE_RANGE, GRAVEYARD_RANGE
 import facebook_connector
 
 # ==================================================== CONSTANTS ===================================================== #
@@ -41,7 +42,7 @@ class ConfessionManager(object):
         try:
             with open(self.backup_file, "r") as backup_file:
                 self.queue = pickle.load(backup_file)
-        except OSError:
+        except (IOError, EOFError):
             self.queue = []
 
     def _process_spreadsheet(self):
@@ -51,13 +52,13 @@ class ConfessionManager(object):
         Move posted marked with 'a' to the archive.
         Publish posts marked with 'v'.
         """
-        confessions = self.get_ready_confessions(google_connector.GRAVEYARD_MODE)
-        self._add_confessions_to_table(confessions, google_connector.GRAVEYARD_RANGE)
+        confessions = self.confessions.get_confessions(google_connector.GRAVEYARD_MODE)
+        self.confessions.move_confessions(confessions, GRAVEYARD_RANGE)
 
-        confessions = self.get_ready_confessions(google_connector.ARCHIVE_MODE)
-        self._add_confessions_to_table(confessions, google_connector.ARCHIVE_MODE)
+        confessions = self.confessions.get_confessions(google_connector.ARCHIVE_MODE)
+        self.confessions.move_confessions(confessions, ARCHIVE_RANGE)
 
-        return self.get_ready_confessions(google_connector.PUBLISH_MODE)
+        return self.confessions.get_confessions(google_connector.PUBLISH_MODE)
 
     def _publish_queue(self):
         """
@@ -77,18 +78,20 @@ class ConfessionManager(object):
                     # Get confessions to post.
                     self.queue = self._process_spreadsheet()
 
+                    # Archive confessions
+                    self.confessions.move_confessions(self.queue, ARCHIVE_RANGE)
+
                     # Publish confessions
                     self._publish_queue()
 
-                    # Archive confessions
-                    self.confessions.archive_confessions(self.queue)
+                    time.sleep(10)
 
                 except KeyboardInterrupt:
                     raise
 
-                except Exception:
+                except Exception as exception:
                     # TODO: Use logging
-                    print "Critical error occoured."
+                    print exception
                     # Give the server some time to think
                     time.sleep(60)
 
@@ -96,8 +99,8 @@ class ConfessionManager(object):
             if len(self.queue) != 0:
                 try:
                     with open(self.backup_file, "w") as backup_file:
-                        json.dump(self.queue)
-                except OSError:
+                        pickle.dump(self.queue, backup_file)
+                except IOError:
                     pass
 
 

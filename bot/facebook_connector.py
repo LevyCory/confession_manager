@@ -21,7 +21,8 @@ CREDENTIALS_PAGE_ACCESS_TOKEN_KEY = "idf_confessions_access_token"
 CREDENTIALS_PAGE_ID_KEY = "page_id"
 
 POST_FORMAT = "#{post_number} {text}"
-POST_NUMBER_REGEX = "^#(\d+) "
+POST_NUMBER_REGEX = "^#(\d+)."
+POST_NUMBER_REVERSE_REGEX = "^(\d+)#."
 
 POST_DATA_POSTS_KEY = "data"
 POST_DATA_MESSAGE_KEY = "message"
@@ -89,7 +90,12 @@ class IDFConfessionsPage(FacebookPage):
         """
         # Parse the post number from the last post
         last_post = self.get_posts()[0][POST_DATA_MESSAGE_KEY]
-        return int(re.search(POST_NUMBER_REGEX, last_post).group(1))
+        post_number = re.search(POST_NUMBER_REGEX, last_post)
+        if post_number is not None:
+            return int(post_number.group(1))
+        else:
+            post_number = re.search(POST_NUMBER_REVERSE_REGEX, last_post)
+            return int(post_number.group(1))
 
     def post(self, confession):
         """
