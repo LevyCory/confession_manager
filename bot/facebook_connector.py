@@ -22,7 +22,6 @@ CREDENTIALS_PAGE_ID_KEY = "page_id"
 
 POST_FORMAT = "#{post_number} {text}"
 POST_NUMBER_REGEX = "^#(\d+)."
-POST_NUMBER_REVERSE_REGEX = "^(\d+)#."
 
 POST_DATA_POSTS_KEY = "data"
 POST_DATA_MESSAGE_KEY = "message"
@@ -91,11 +90,7 @@ class IDFConfessionsPage(FacebookPage):
         # Parse the post number from the last post
         last_post = self.get_posts()[0][POST_DATA_MESSAGE_KEY]
         post_number = re.search(POST_NUMBER_REGEX, last_post)
-        if post_number is not None:
-            return int(post_number.group(1))
-        else:
-            post_number = re.search(POST_NUMBER_REVERSE_REGEX, last_post)
-            return int(post_number.group(1))
+        return int(post_number.group(1))
 
     def post(self, confession):
         """
@@ -103,5 +98,7 @@ class IDFConfessionsPage(FacebookPage):
         @param confession: The confession to post
         @type confession: dict
         """
-        post = POST_FORMAT.format(post_number=self._last_post_number + 1, text=confession["Confession"])
+        post_number = self._last_post_number + 1
+        post = POST_FORMAT.format(post_number=post_number, text=confession["Confession"])
+        print "Posting confession #{number}".format(number=post_number)
         super(IDFConfessionsPage, self).post(post)

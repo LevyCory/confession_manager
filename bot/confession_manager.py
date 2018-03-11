@@ -19,7 +19,7 @@ import facebook_connector
 # ==================================================== CONSTANTS ===================================================== #
 
 CONFESSION_MANAGER_DIRECTORY = os.path.expanduser("~/.confessions")
-PUBLISH_LIST_FILE_NAME = "confessions.json"
+PUBLISH_LIST_FILE_NAME = "confessions.pickle"
 FILE_NOT_FOUND_ERRNO = 2
 
 # ===================================================== CLASSES ====================================================== #
@@ -54,9 +54,11 @@ class ConfessionManager(object):
         """
         confessions = self.confessions.get_confessions(google_connector.GRAVEYARD_MODE)
         self.confessions.move_confessions(confessions, GRAVEYARD_RANGE)
+        time.sleep(2)
 
         confessions = self.confessions.get_confessions(google_connector.ARCHIVE_MODE)
         self.confessions.move_confessions(confessions, ARCHIVE_RANGE)
+        time.sleep(2)
 
         return self.confessions.get_confessions(google_connector.PUBLISH_MODE)
 
@@ -72,38 +74,39 @@ class ConfessionManager(object):
         """
         Run the server
         """
+        print "Confession Manager is now Running."
         try:
             while True:
-                try:
-                    # Get confessions to post.
+                # Get confessions to post.
+                if len(self.queue) == 0:
                     self.queue = self._process_spreadsheet()
 
-                    # Archive confessions
-                    self.confessions.move_confessions(self.queue, ARCHIVE_RANGE)
+                # Publish confessions
+                self._publish_queue()
 
-                    # Publish confessions
-                    self._publish_queue()
+                # Archive confessions
+                self.confessions.move_confessions(self.queue, ARCHIVE_RANGE)
+                self.queue = []
 
-                    time.sleep(10)
-
-                except KeyboardInterrupt:
-                    raise
-
-                except Exception as exception:
-                    # TODO: Use logging
-                    print exception
-                    # Give the server some time to think
-                    time.sleep(60)
+                time.sleep(10)
 
         except KeyboardInterrupt:
-            if len(self.queue) != 0:
-                try:
+            try:
+                if len(self.queue) != 0:
                     with open(self.backup_file, "w") as backup_file:
                         pickle.dump(self.queue, backup_file)
-                except IOError:
-                    pass
+                else:
+                    os.remove(self.backup_file)
+
+            except (IOError, OSError):
+                pass
 
 
 if __name__ == "__main__":
-    server = ConfessionManager()
-    server.run()
+    while True:
+        try:
+            server = ConfessionManager()
+            server.run()
+        except Exception as e:
+            print e
+        time.sleep(60)
