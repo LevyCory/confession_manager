@@ -17,6 +17,8 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
+from confession_manager_exceptions import UnavailableResourseError
+
 # ==================================================== CONSTANTS ===================================================== #
 
 CREDENTIALS_FILE_PATH = os.path.expanduser("~/client_secret.json")
@@ -32,6 +34,8 @@ ROWS_DIMENSION = "ROWS"
 READY_CONFESSIONS_A1_FORMAT = "Form Responses 1!A:C"
 ARCHIVE_RANGE = "Archive!A:C"
 GRAVEYARD_RANGE = "Graveyard!A:C"
+LOCK_FORMAT = "Lock!A1"
+LOCK_DATA = "Confession Manager Lock"
 PUBLISHED_TIME_FORMAT = "%m/%m/%Y %H:%M:%S"
 
 RAW_INPUT_OPTION = "RAW"
@@ -47,6 +51,7 @@ CONFESSION_INDEX = 1
 GRAVEYARD_MODE = "x"
 ARCHIVE_MODE = "a"
 PUBLISH_MODE = "v"
+QUEUE_MODE = "q"
 
 # ===================================================== CLASSES ====================================================== #
 
@@ -69,6 +74,12 @@ class Sheet(object):
         self.connection = self.credentials.authorize(httplib2.Http())
         discovery_url = (SHEETS_API_URL)
         self.service = discovery.build('sheets', 'v4', http=self.connection, discoveryServiceUrl=discovery_url)
+
+    def __del__(self):
+        """
+        """
+        if self.has_lock:
+            self.release()
 
     def _get_credentials(self):
         """
@@ -172,6 +183,7 @@ class ConfessionsSheet(Sheet):
     """
     def __init__(self):
         super(ConfessionsSheet, self).__init__(CONFESSIONS_SPREADSHEET_ID)
+        self.has_lock = False
 
     def get_confessions(self, mode):
         """
@@ -225,3 +237,19 @@ class ConfessionsSheet(Sheet):
         """
         line_numbers = [confession[LINE_NUMBER_DICT_KEY] for confession in confessions]
         self.delete_rows(CONFESSION_SHEET_ID, line_numbers)
+
+    def lock(self):
+        """
+        """
+        data = self.get_data(LOCK_FORMAT)
+        if not data:
+            self.add_row(LOCK_DATA, LOCK_FORMAT)
+            self.has_lock = True
+        else:
+            raise UnavailableResourseError("The lock could not be acquired")
+
+    def release(self):
+        """
+        """
+        self.delete_rows([1], LOCK_FORMAT)
+        self.has_lock = False

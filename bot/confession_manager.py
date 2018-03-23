@@ -11,10 +11,12 @@
 import os
 import time
 import pickle
+import datetime
 
 import google_connector
-from google_connector import ARCHIVE_RANGE, GRAVEYARD_RANGE
 import facebook_connector
+from google_connector import ARCHIVE_RANGE, GRAVEYARD_RANGE
+from confession_manager_exceptions import UnavailableResourseError
 
 # ==================================================== CONSTANTS ===================================================== #
 
@@ -31,6 +33,12 @@ class ConfessionManager(object):
     """
     def __init__(self):
         self.confessions = google_connector.ConfessionsSheet()
+        try:
+            self.confessions.lock()
+        except UnavailableResourseError:
+            raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down"
+                    "before running another one")
+
         self.page = facebook_connector.IDFConfessionsPage()
         self.backup_file = os.path.join(CONFESSION_MANAGER_DIRECTORY, PUBLISH_LIST_FILE_NAME)
 
@@ -74,12 +82,21 @@ class ConfessionManager(object):
         """
         Run the server
         """
+        last_publish_time = datetime.datetime.now()
+
         print "Confession Manager is now Running."
+
         try:
             while True:
+                current_time = datetime.datetime.now()
+
                 # Get confessions to post.
                 if len(self.queue) == 0:
                     self.queue = self._process_spreadsheet()
+
+                if 24 >= current_time.hour >= 7 and current_time.minutes - last_publish_time.minutes > 45:
+                    self.queue.extend(self.confessions.get_confessions(google_connector.QUEUE_MODE))
+                    last_publish_time = current_time
 
                 # Publish confessions
                 self._publish_queue()
