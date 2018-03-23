@@ -11,6 +11,7 @@
 import os
 import time
 import pickle
+import random
 import datetime
 
 import google_connector
@@ -22,7 +23,14 @@ from confession_manager_exceptions import UnavailableResourseError
 
 CONFESSION_MANAGER_DIRECTORY = os.path.expanduser("~/.confessions")
 PUBLISH_LIST_FILE_NAME = "confessions.pickle"
+
 FILE_NOT_FOUND_ERRNO = 2
+MIN_CONFESSION_COUNT = 5
+MAX_CONFESSION_COUNT = 8
+MIN_TIMEOUT_MINUTES = 30
+MAX_TIMEOUT_MINUTES = 50
+TWELVE_AM = 24
+SEVEN_AM = 7
 
 # ===================================================== CLASSES ====================================================== #
 
@@ -36,7 +44,7 @@ class ConfessionManager(object):
         try:
             self.confessions.lock()
         except UnavailableResourseError:
-            raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down"
+            raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down "
                     "before running another one")
 
         self.page = facebook_connector.IDFConfessionsPage()
@@ -52,6 +60,12 @@ class ConfessionManager(object):
                 self.queue = pickle.load(backup_file)
         except (IOError, EOFError):
             self.queue = []
+
+    def __del__(self):
+        try:
+            del self.confessions
+        except Exception:
+            pass
 
     def _process_spreadsheet(self):
         """
@@ -82,10 +96,12 @@ class ConfessionManager(object):
         """
         Run the server
         """
-        last_publish_time = datetime.datetime.now()
+        last_publish_time = None
+        offline_queue_timeout_minutes = random.randint(MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES)
 
         print "Confession Manager is now Running."
 
+        import pdb; pdb.set_trace() 
         try:
             while True:
                 current_time = datetime.datetime.now()
@@ -94,9 +110,29 @@ class ConfessionManager(object):
                 if len(self.queue) == 0:
                     self.queue = self._process_spreadsheet()
 
-                if 24 >= current_time.hour >= 7 and current_time.minutes - last_publish_time.minutes > 45:
-                    self.queue.extend(self.confessions.get_confessions(google_connector.QUEUE_MODE))
-                    last_publish_time = current_time
+                
+                # Check how much time has passed since the last posting session
+                if last_publish_time is not None:
+                    elapsed_time_minutes = (current_time.minute - last_publish_time.minute).seconds / 60
+                else:
+                    elapsed_time_minutes = 51
+
+                if TWELVE_AM >= current_time.hour >= SEVEN_AM and elapsed_time_minutes > offline_queue_timeout_minutes:
+                    # Get confessions from the offline queue
+                    queued_confessions = self.confessions.get_confessions(google_connector.QUEUE_MODE)
+
+                    # Perform the next steps only if there were queued confessions to prevent waiting too much
+                    if len(queued_confessions) != 0:
+                        try:
+                            # Post a random number of confessions from the queue
+                            queued_confessions = queued_confessions[:random.randint(MIN_CONFESSION_COUNT, MAX_CONFESSION_COUNT)]
+                        except IndexError:
+                            pass
+
+                        self.queue.extend(queued_confessions)
+                        last_publish_time = current_time
+
+                        offline_queue_timeout_minutes = random.randint(MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES)
 
                 # Publish confessions
                 self._publish_queue()
@@ -124,6 +160,14 @@ if __name__ == "__main__":
         try:
             server = ConfessionManager()
             server.run()
+
+        except KeyboardInterrupt:
+            break
+
+        except UnavailableResourseError as e:
+            print e
+            break
+
         except Exception as e:
             print e
         time.sleep(60)

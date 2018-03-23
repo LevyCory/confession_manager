@@ -24,6 +24,7 @@ from confession_manager_exceptions import UnavailableResourseError
 CREDENTIALS_FILE_PATH = os.path.expanduser("~/client_secret.json")
 CONFESSIONS_SPREADSHEET_ID = "1eyPP0nEnivMe9fS_y1Z8EKwY02f8rETxKK1RmaRlKYs"
 CONFESSION_SHEET_ID = "444158458"
+LOCK_SHEET_ID = "742924914"
 ARCHIVE_SHEET_ID = "1557599273"
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 SHEETS_API_URL = "https://sheets.googleapis.com/$discovery/rest?version=v4"
@@ -243,7 +244,7 @@ class ConfessionsSheet(Sheet):
         """
         data = self.get_data(LOCK_FORMAT)
         if not data:
-            self.add_row(LOCK_DATA, LOCK_FORMAT)
+            self.add_row([[LOCK_DATA]], LOCK_FORMAT)
             self.has_lock = True
         else:
             raise UnavailableResourseError("The lock could not be acquired")
@@ -251,5 +252,5 @@ class ConfessionsSheet(Sheet):
     def release(self):
         """
         """
-        self.delete_rows([1], LOCK_FORMAT)
+        self.delete_rows(LOCK_SHEET_ID, [1])
         self.has_lock = False
