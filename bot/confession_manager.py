@@ -42,7 +42,8 @@ class ConfessionManager(object):
     def __init__(self):
         self.confessions = google_connector.ConfessionsSheet()
         try:
-            self.confessions.lock()
+            pass
+            # self.confessions.lock()
         except UnavailableResourseError:
             raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down "
                     "before running another one")
@@ -96,12 +97,11 @@ class ConfessionManager(object):
         """
         Run the server
         """
-        last_publish_time = None
+        last_publish_time = datetime.datetime.now()
         offline_queue_timeout_minutes = random.randint(MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES)
 
         print "Confession Manager is now Running."
 
-        import pdb; pdb.set_trace() 
         try:
             while True:
                 current_time = datetime.datetime.now()
@@ -110,12 +110,8 @@ class ConfessionManager(object):
                 if len(self.queue) == 0:
                     self.queue = self._process_spreadsheet()
 
-                
                 # Check how much time has passed since the last posting session
-                if last_publish_time is not None:
-                    elapsed_time_minutes = (current_time.minute - last_publish_time.minute).seconds / 60
-                else:
-                    elapsed_time_minutes = 51
+                elapsed_time_minutes = (current_time - last_publish_time).seconds / 60
 
                 if TWELVE_AM >= current_time.hour >= SEVEN_AM and elapsed_time_minutes > offline_queue_timeout_minutes:
                     # Get confessions from the offline queue
