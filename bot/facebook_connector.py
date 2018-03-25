@@ -16,7 +16,9 @@ import facebook
 
 # ==================================================== CONSTANTS ===================================================== #
 
+HOME_DIRECTORY = os.path.expanduser("~")
 CREDENTIALS_FILE = os.path.expanduser("~/.credentials/facebook/credentials.json")
+CREDENTIALS_FILE = os.path.join(HOME_DIRECTORY, ".credentials", "facebook", "credentials.json")
 CREDENTIALS_PAGE_ACCESS_TOKEN_KEY = "idf_confessions_access_token"
 CREDENTIALS_PAGE_ID_KEY = "page_id"
 

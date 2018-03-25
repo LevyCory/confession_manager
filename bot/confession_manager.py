@@ -21,7 +21,8 @@ from confession_manager_exceptions import UnavailableResourseError
 
 # ==================================================== CONSTANTS ===================================================== #
 
-CONFESSION_MANAGER_DIRECTORY = os.path.expanduser("~/.confessions")
+HOME_DIRECTORY = os.path.expanduser("~")
+CONFESSION_MANAGER_DIRECTORY = os.path.join(HOME_DIRECTORY, ".confessions")
 PUBLISH_LIST_FILE_NAME = "confessions.pickle"
 
 FILE_NOT_FOUND_ERRNO = 2

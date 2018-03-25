@@ -21,7 +21,8 @@ from confession_manager_exceptions import UnavailableResourseError
 
 # ==================================================== CONSTANTS ===================================================== #
 
-CREDENTIALS_FILE_PATH = os.path.expanduser("~/client_secret.json")
+HOME_DIRECTORY = os.path.expanduser("~")
+CREDENTIALS_FILE_PATH = os.path.join(HOME_DIRECTORY, "client_secret.json")
 CONFESSIONS_SPREADSHEET_ID = "1eyPP0nEnivMe9fS_y1Z8EKwY02f8rETxKK1RmaRlKYs"
 CONFESSION_SHEET_ID = "444158458"
 LOCK_SHEET_ID = "742924914"
