@@ -80,6 +80,8 @@ class IDFConfessionsPage(FacebookPage):
         except OSError:
             raise OSError("Credentials file not found in {path}".format(path=CREDENTIALS_FILE))
 
+        self._last_post_number_cache = None
+
         super(IDFConfessionsPage, self).__init__(self.credentials[CREDENTIALS_PAGE_ID_KEY],
                                                  self.credentials[CREDENTIALS_PAGE_ACCESS_TOKEN_KEY])
 
@@ -90,9 +92,13 @@ class IDFConfessionsPage(FacebookPage):
         @rtype: int
         """
         # Parse the post number from the last post
-        last_post = self.get_posts()[0][POST_DATA_MESSAGE_KEY]
-        post_number = re.search(POST_NUMBER_REGEX, last_post)
-        return int(post_number.group(1))
+        try:
+            last_post = self.get_posts()[0][POST_DATA_MESSAGE_KEY]
+            post_number = re.search(POST_NUMBER_REGEX, last_post)
+            self._last_post_number_cache = int(post_number.group(1))
+            return self._last_post_number_cache
+        except Exception:
+            return self._last_post_number_cache
 
     def post(self, confession):
         """
