@@ -12,5 +12,9 @@ setup(
         "requests",
         "google-api-python-client"
     ],
-    entry_points={}
+    entry_points={
+        "console_scripts": [
+            "confession_manager=bot.server:main"
+        ]
+    }
 )

@@ -10,7 +10,6 @@
 
 import os
 import time
-import pickle
 import random
 import datetime
 
@@ -20,10 +19,6 @@ from google_connector import ARCHIVE_RANGE, GRAVEYARD_RANGE
 from confession_manager_exceptions import UnavailableResourseError
 
 # ==================================================== CONSTANTS ===================================================== #
-
-HOME_DIRECTORY = os.path.expanduser("~")
-CONFESSION_MANAGER_DIRECTORY = os.path.join(HOME_DIRECTORY, ".confessions")
-PUBLISH_LIST_FILE_NAME = "confessions.pickle"
 
 FILE_NOT_FOUND_ERRNO = 2
 MIN_CONFESSION_COUNT = 5
@@ -44,47 +39,35 @@ class ConfessionManager(object):
         self.confessions = google_connector.ConfessionsSheet()
         try:
             pass
+            # TODO: Fix
             # self.confessions.lock()
         except UnavailableResourseError:
             raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down "
                     "before running another one")
 
         self.page = facebook_connector.IDFConfessionsPage()
-        self.backup_file = os.path.join(CONFESSION_MANAGER_DIRECTORY, PUBLISH_LIST_FILE_NAME)
-
-        try:
-            os.makedirs(CONFESSION_MANAGER_DIRECTORY)
-        except OSError:
-            pass
-
-        try:
-            with open(self.backup_file, "r") as backup_file:
-                self.queue = pickle.load(backup_file)
-        except (IOError, EOFError):
-            self.queue = []
+        self.queue = []
 
     def __del__(self):
         try:
+            self.confessions.release()
             del self.confessions
         except Exception:
             pass
 
-    def _process_spreadsheet(self):
+    def _delete_confessions(self):
         """
-        Process the spread sheet:
-        Move posted marked with 'x' to the graveyard.
-        Move posted marked with 'a' to the archive.
-        Publish posts marked with 'v'.
         """
         confessions = self.confessions.get_confessions(google_connector.GRAVEYARD_MODE)
+        time.sleep(1)
         self.confessions.move_confessions(confessions, GRAVEYARD_RANGE)
-        time.sleep(2)
 
+    def _archive_confessions(self):
+        """
+        """
         confessions = self.confessions.get_confessions(google_connector.ARCHIVE_MODE)
+        time.sleep(1)
         self.confessions.move_confessions(confessions, ARCHIVE_RANGE)
-        time.sleep(2)
-
-        return self.confessions.get_confessions(google_connector.PUBLISH_MODE)
 
     def _publish_queue(self):
         """
@@ -103,13 +86,16 @@ class ConfessionManager(object):
 
         print "Confession Manager is now Running."
 
-        try:
-            while True:
+        while True:
+            try:
                 current_time = datetime.datetime.now()
+
+                self._delete_confessions()
+                self._archive_confessions()
 
                 # Get confessions to post.
                 if len(self.queue) == 0:
-                    self.queue = self._process_spreadsheet()
+                    self.queue = self.confessions.get_confessions(google_connector.PUBLISH_MODE)
 
                 # Check how much time has passed since the last posting session
                 elapsed_time_minutes = (current_time - last_publish_time).seconds / 60
@@ -122,13 +108,14 @@ class ConfessionManager(object):
                     if len(queued_confessions) != 0:
                         try:
                             # Post a random number of confessions from the queue
-                            queued_confessions = queued_confessions[:random.randint(MIN_CONFESSION_COUNT, MAX_CONFESSION_COUNT)]
+                            queued_confessions = queued_confessions[:random.randint(MIN_CONFESSION_COUNT,
+                                MAX_CONFESSION_COUNT)]
                         except IndexError:
                             pass
 
                         self.queue.extend(queued_confessions)
-                        last_publish_time = current_time
 
+                        last_publish_time = current_time
                         offline_queue_timeout_minutes = random.randint(MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES)
 
                 # Publish confessions
@@ -140,31 +127,11 @@ class ConfessionManager(object):
 
                 time.sleep(10)
 
-        except KeyboardInterrupt:
-            try:
-                if len(self.queue) != 0:
-                    with open(self.backup_file, "w") as backup_file:
-                        pickle.dump(self.queue, backup_file)
-                else:
-                    os.remove(self.backup_file)
+            except KeyboardInterrupt:
+                print "Finishing session..."
+                raise
 
-            except (IOError, OSError):
-                pass
+            except Exception as exception:
+                print exception
+                time.sleep(30)
 
-
-if __name__ == "__main__":
-    while True:
-        try:
-            server = ConfessionManager()
-            server.run()
-
-        except KeyboardInterrupt:
-            break
-
-        except UnavailableResourseError as e:
-            print e
-            break
-
-        except Exception as e:
-            print e
-        time.sleep(60)
