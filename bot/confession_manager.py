@@ -39,12 +39,9 @@ class ConfessionManager(object):
     def __init__(self):
         self.confessions = google_connector.ConfessionsSheet()
         try:
-            pass
-            # TODO: Fix
-            # self.confessions.lock()
+            self.confessions.lock()
         except UnavailableResourseError:
-            raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down "
-                    "before running another one")
+            raise
 
         self.page = facebook_connector.IDFConfessionsPage()
         self.queue = []

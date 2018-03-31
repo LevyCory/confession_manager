@@ -77,12 +77,6 @@ class Sheet(object):
         discovery_url = (SHEETS_API_URL)
         self.service = discovery.build('sheets', 'v4', http=self.connection, discoveryServiceUrl=discovery_url)
 
-    def __del__(self):
-        """
-        """
-        if self.has_lock:
-            self.release()
-
     def _get_credentials(self):
         """
         Gets valid user credentials from storage. If nothing has been stored, or if the stored credentials are invalid,
@@ -186,6 +180,13 @@ class ConfessionsSheet(Sheet):
     def __init__(self):
         super(ConfessionsSheet, self).__init__(CONFESSIONS_SPREADSHEET_ID)
         self.has_lock = False
+
+    def __del__(self):
+        """
+        Release the lock of the server.
+        """
+        if self.has_lock:
+            self.release()
 
     def get_confessions(self, mode):
         """

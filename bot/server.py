@@ -23,8 +23,7 @@ def main():
     except KeyboardInterrupt:
         del server
     except UnavailableResourseError:
-        # TODO: Print indicating message
-        pass
+        print "Another instance of Confession Manager is running. It must be shut down before running another one."
 
 if __name__ == "__main__":
     main()
