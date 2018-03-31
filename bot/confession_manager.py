@@ -8,7 +8,6 @@
 # ==================================================================================================================== #
 # ===================================================== IMPORTS ====================================================== #
 
-import os
 import time
 import random
 import datetime
@@ -20,6 +19,8 @@ from confession_manager_exceptions import UnavailableResourseError
 
 # ==================================================== CONSTANTS ===================================================== #
 
+SECONDS_IN_MINUTE = 60
+DUPLICATE_DELETION_TIMEOUT_MINUTES = 30
 FILE_NOT_FOUND_ERRNO = 2
 MIN_CONFESSION_COUNT = 5
 MAX_CONFESSION_COUNT = 8
@@ -82,6 +83,7 @@ class ConfessionManager(object):
         Run the server
         """
         last_publish_time = datetime.datetime.now()
+        last_duplicate_deletion_time = datetime.datetime.now()
         offline_queue_timeout_minutes = random.randint(MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES)
 
         print "Confession Manager is now Running."
@@ -90,6 +92,12 @@ class ConfessionManager(object):
             try:
                 current_time = datetime.datetime.now()
 
+                # Delete duplicate posts every 30 minutes
+                time_since_duplicate_deletion = (current_time - last_duplicate_deletion_time).seconds / SECONDS_IN_MINUTE
+                if time_since_duplicate_deletion > DUPLICATE_DELETION_TIMEOUT_MINUTES:
+                    self.confessions.delete_duplicates()
+
+                # Re arrange the confession sheet
                 self._delete_confessions()
                 self._archive_confessions()
 

@@ -219,6 +219,53 @@ class ConfessionsSheet(Sheet):
         self._add_confessions_to_table(confessions, destinstaion)
         self._delete_confessions_from_pool(confessions)
 
+    def delete_duplicates(self):
+        """
+        Delete confessions that appear in more than one line
+        """
+        duplicates = self._get_duplicate_confessions()
+
+        # Make sure there is one confession left of each duplicate
+        for confession in duplicates:
+            duplicates[confession].pop()
+
+        blacklist = []
+        for lines in duplicates.values():
+            blacklist.extend(lines)
+
+        self.delete_rows(CONFESSION_SHEET_ID, blacklist)
+
+    def _get_duplicate_confessions(self):
+        """
+        Get the confession that were sent more than one time.
+        @return: A dict mapping a confession to the lines it appears at.
+        @rtype: dict
+        """
+        confessions_lines = {}
+        duplicate_confessions = {}
+
+        raw_confessions = self.get_data(READY_CONFESSIONS_A1_FORMAT)
+
+        # Map confessions to lines
+        for index, confession in enumerate(raw_confessions):
+            try:
+                try:
+                    confessions_lines[confession[1]].append(index + 1)
+                except IndexError:
+                    pass
+            except KeyError:
+                try:
+                    confessions_lines[confession[1]] = [index + 1]
+                except IndexError:
+                    pass
+
+        # Leave only the confessions with more than one line
+        for confession, lines in confessions_lines.iteritems():
+            if len(lines) > 1:
+                duplicate_confessions[confession] = lines
+
+        return duplicate_confessions
+
     def _add_confessions_to_table(self, confessions, data_range):
         """
         Add a confession row to the archive.
