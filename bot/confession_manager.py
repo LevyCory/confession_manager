@@ -22,11 +22,11 @@ from confession_manager_exceptions import UnavailableResourseError
 SECONDS_IN_MINUTE = 60
 DUPLICATE_DELETION_TIMEOUT_MINUTES = 30
 FILE_NOT_FOUND_ERRNO = 2
-MIN_CONFESSION_COUNT = 5
-MAX_CONFESSION_COUNT = 8
-MIN_TIMEOUT_MINUTES = 30
-MAX_TIMEOUT_MINUTES = 50
-TWELVE_AM = 24
+MIN_CONFESSION_COUNT = 2
+MAX_CONFESSION_COUNl = 4
+MIN_TIMEOUT_MINUTES = 60
+MAX_TIMEOUT_MINUTES = 70
+TWELVE_AM = 23
 SEVEN_AM = 7
 
 # ===================================================== CLASSES ====================================================== #
