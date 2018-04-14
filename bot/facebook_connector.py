@@ -108,5 +108,5 @@ class IDFConfessionsPage(FacebookPage):
         """
         post_number = self._last_post_number + 1
         post = POST_FORMAT.format(post_number=post_number, text=confession["Confession"])
-        print "Posting confession #{number}".format(number=post_number)
+        logging.info("Posting confession #{number}".format(number=post_number))
         super(IDFConfessionsPage, self).post(post)

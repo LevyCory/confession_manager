@@ -297,8 +297,11 @@ class ConfessionsSheet(Sheet):
         else:
             raise UnavailableResourseError("The lock could not be acquired")
 
+        logging.debug("Lock acquired")
+
     def release(self):
         """
         """
         self.delete_rows(LOCK_SHEET_ID, [1])
         self.has_lock = False
+        logging.debug("Lock released")
