@@ -23,7 +23,7 @@ SECONDS_IN_MINUTE = 60
 DUPLICATE_DELETION_TIMEOUT_MINUTES = 30
 FILE_NOT_FOUND_ERRNO = 2
 MIN_CONFESSION_COUNT = 2
-MAX_CONFESSION_COUNl = 4
+MAX_CONFESSION_COUNT = 4
 MIN_TIMEOUT_MINUTES = 60
 MAX_TIMEOUT_MINUTES = 70
 TWELVE_AM = 23
@@ -59,6 +59,7 @@ class ConfessionManager(object):
     def _delete_confessions(self):
         """
         """
+        logging.debug("Deleting confessions mark with 'X'")
         confessions = self.confessions.get_confessions(google_connector.GRAVEYARD_MODE)
         time.sleep(1)
         self.confessions.move_confessions(confessions, GRAVEYARD_RANGE)
@@ -66,6 +67,7 @@ class ConfessionManager(object):
     def _archive_confessions(self):
         """
         """
+        logging.debug("Archiving confessions")
         confessions = self.confessions.get_confessions(google_connector.ARCHIVE_MODE)
         time.sleep(1)
         self.confessions.move_confessions(confessions, ARCHIVE_RANGE)
@@ -74,6 +76,7 @@ class ConfessionManager(object):
         """
         Publish the queue to IDF Confessions
         """
+        logging.debug("Publishing confessions from queue")
         for confession in self.queue:
             self.page.post(confession)
             time.sleep(8)

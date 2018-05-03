@@ -27,8 +27,7 @@ def main():
     except KeyboardInterrupt:
         del server
     except UnavailableResourseError:
-        # TODO: Print indicating message
-        pass
+        logging.error("")
 
 if __name__ == "__main__":
     main()
