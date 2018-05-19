@@ -10,19 +10,26 @@
 
 import os
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 # ==================================================== CONSTANTS ===================================================== #
 
 LOG_ROTATION_INTERVAL = "midnight"
-CONSOLE_LOGGING_FORMAT = "%(asctime)s - %(levelbame)s - $(message)s"
-FILE_LOGGING_FORMAT = "%(asctime)s - %(levelbame)s: [$(pathname)s] - $(message)s"
+CONSOLE_LOGGING_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+FILE_LOGGING_FORMAT = "%(asctime)s - %(levelname)s: [%(pathname)s] - %(message)s"
 
 # ===================================================== CLASSES ====================================================== #
 
 def setup_logger(folder, filename, verbose=False):
     """
     """
+    
     logger = logging.getLogger()
+
+    logging.getLogger("requests").setLevel(logging.CRITICAL)
+    logging.getLogger("apiclient").setLevel(logging.CRITICAL)
+    logging.getLogger("oauth2client").setLevel(logging.CRITICAL)
+    logging.getLogger("httplib2").setLevel(logging.CRITICAL)
 
     try:
         os.makedirs(folder)
@@ -50,4 +57,4 @@ def setup_logger(folder, filename, verbose=False):
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    logger.setLevel(logging.debug)
+    logger.setLevel(logging.DEBUG)

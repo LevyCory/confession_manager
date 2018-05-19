@@ -11,6 +11,7 @@
 import re
 import os
 import json
+import logging
 
 import facebook
 

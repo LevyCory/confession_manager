@@ -8,6 +8,7 @@
 # ==================================================================================================================== #
 # ===================================================== IMPORTS ====================================================== #
 
+import os
 import time
 
 from logger import setup_logger
@@ -15,8 +16,9 @@ from confession_manager import ConfessionManager
 from confession_manager_exceptions import UnavailableResourseError
 
 # ==================================================== CONSTANTS ===================================================== #
-LOGS_DIRECTORY = ""
-LOG_FILE_PREFIX = ""
+
+LOGS_DIRECTORY = os.path.join(os.curdir, "logs")
+LOG_FILE_PREFIX = "confession_manager"
 
 def main():
     setup_logger(LOGS_DIRECTORY, LOG_FILE_PREFIX)
