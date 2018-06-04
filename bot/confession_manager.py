@@ -10,6 +10,7 @@
 
 import time
 import random
+import socket
 import logging
 import datetime
 
@@ -138,6 +139,9 @@ class ConfessionManager(object):
                 self.queue = []
 
                 time.sleep(10)
+
+            except socket.timeout:
+                self.confessions.reconnect()
 
             except KeyboardInterrupt:
                 print "Finishing session..."

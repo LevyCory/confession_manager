@@ -31,6 +31,7 @@ ARCHIVE_SHEET_ID = "1557599273"
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 SHEETS_API_URL = "https://sheets.googleapis.com/$discovery/rest?version=v4"
 APPLICATION_NAME = 'Confession Manager'
+HTTP_REQUEST_TIMEOUT_SECONDS = 20
 
 CONFESSION_READY_LENGTH = 3
 ROWS_DIMENSION = "ROWS"
@@ -70,13 +71,13 @@ class Sheet(object):
         """
         self.id = sheet_id
 
+        self.has_lock = False
+        
         # Load credentials file
         self.credentials = self._get_credentials()
 
-        # Create the connection to Google Sheets
-        self.connection = self.credentials.authorize(httplib2.Http())
-        discovery_url = (SHEETS_API_URL)
-        self.service = discovery.build('sheets', 'v4', http=self.connection, discoveryServiceUrl=discovery_url)
+        # Connect to Google Sheet
+        self._connect()
 
     def __del__(self):
         """
@@ -107,6 +108,23 @@ class Sheet(object):
             credentials = tools.run_flow(flow, store)
 
         return credentials
+
+    def _connect(self):
+        """
+        """
+        logging.info("Connecting to Google Sheets")
+
+        # Create the connection to Google Sheets
+        self.connection = self.credentials.authorize(httplib2.Http(timeout=HTTP_REQUEST_TIMEOUT_SECONDS))
+        discovery_url = (SHEETS_API_URL)
+        self.service = discovery.build('sheets', 'v4', http=self.connection, discoveryServiceUrl=discovery_url)
+
+    def reconnect(self):
+        """
+        """
+        del self.connection
+        del self.service
+        self._connect()
 
     def get_data(self, data_range):
         """
