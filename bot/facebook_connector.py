@@ -87,7 +87,7 @@ class IDFConfessionsPage(FacebookPage):
                                                  self.credentials[CREDENTIALS_PAGE_ACCESS_TOKEN_KEY])
 
     @property
-    def _last_post_number(self):
+    def last_post_number(self):
         """
         @return: The last confession number.
         @rtype: int
@@ -107,7 +107,7 @@ class IDFConfessionsPage(FacebookPage):
         @param confession: The confession to post
         @type confession: dict
         """
-        post_number = self._last_post_number + 1
+        post_number = self.last_post_number + 1
         post = POST_FORMAT.format(post_number=post_number, text=confession["Confession"])
         logging.info("Posting confession #{number}".format(number=post_number))
         super(IDFConfessionsPage, self).post(post)

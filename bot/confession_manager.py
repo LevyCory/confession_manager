@@ -97,6 +97,10 @@ class ConfessionManager(object):
             try:
                 current_time = datetime.datetime.now()
 
+                # Check if the next post is a multiply of 1000
+                if (self.page.last_post_number + 1) % 1000 == 0:
+                    continue
+
                 # Delete duplicate posts every 30 minutes
                 time_since_duplicate_deletion = (current_time - last_duplicate_deletion_time).seconds / SECONDS_IN_MINUTE
                 if time_since_duplicate_deletion > DUPLICATE_DELETION_TIMEOUT_MINUTES:
