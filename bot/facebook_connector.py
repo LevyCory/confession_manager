@@ -31,6 +31,7 @@ POST_DATA_MESSAGE_KEY = "message"
 PAGE_DATA_ID_KEY = "id"
 
 POSTS_REQUEST_KEYWORD = "posts"
+DEFAULT_TIMEOUT_SECONDS = 20
 
 # ===================================================== CLASSES ====================================================== #
 
@@ -39,14 +40,31 @@ class FacebookPage(object):
     """
     Represents a facebook page, allows posting to the page as the page.
     """
-    def __init__(self, page_id, access_token):
+    def __init__(self, page_id, access_token, timeout=DEFAULT_TIMEOUT_SECONDS):
         """
         @param page_id: the page id as shown in the page->about
         @param access_token: the access token from Facebook Graph
         (explanation: http://nodotcom.org/python-facebook-tutorial.html)
         """
-        self.page = facebook.GraphAPI(access_token)
-        self.page_data = self.page.get_object(page_id)
+        self.access_token = access_token
+        self.timeout = timeout
+        self.page_id = page_id
+        self._connect()
+
+    def _connect(self):
+        """
+
+        @return:
+        """
+        self.page = facebook.GraphAPI(self.access_token, self.timeout)
+        self.page_data = self.page.get_object(self.page_id)
+
+    def reconnect(self):
+        """
+
+        @return:
+        """
+        self._connect()
 
     def post(self, message):
         """

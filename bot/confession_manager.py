@@ -146,6 +146,7 @@ class ConfessionManager(object):
 
             except socket.timeout:
                 self.confessions.reconnect()
+                self.page.reconnect()
 
             except KeyboardInterrupt:
                 print "Finishing session..."

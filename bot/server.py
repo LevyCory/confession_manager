@@ -10,6 +10,7 @@
 
 import os
 import time
+import logging
 
 from logger import setup_logger
 from confession_manager import ConfessionManager
