@@ -9,7 +9,7 @@
 # ===================================================== IMPORTS ====================================================== #
 
 import os
-import time
+import logging
 
 from logger import setup_logger
 from confession_manager import ConfessionManager
@@ -20,9 +20,11 @@ from confession_manager_exceptions import UnavailableResourseError
 LOGS_DIRECTORY = os.path.join(os.curdir, "logs")
 LOG_FILE_PREFIX = "confession_manager"
 
+
 def main():
     setup_logger(LOGS_DIRECTORY, LOG_FILE_PREFIX)
 
+    server = None
     try:
         server = ConfessionManager()
         server.run()
@@ -30,6 +32,7 @@ def main():
         del server
     except UnavailableResourseError:
         logging.error("")
+
 
 if __name__ == "__main__":
     main()

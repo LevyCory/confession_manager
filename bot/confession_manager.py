@@ -14,10 +14,9 @@ import socket
 import logging
 import datetime
 
-import google_connector
-import facebook_connector
-from google_connector import ARCHIVE_RANGE, GRAVEYARD_RANGE
-from confession_manager_exceptions import UnavailableResourseError
+import google_integration
+import facebook_integration
+from google_integration import ARCHIVE_RANGE, GRAVEYARD_RANGE
 
 # ==================================================== CONSTANTS ===================================================== #
 
@@ -39,38 +38,24 @@ class ConfessionManager(object):
     Takes confessions from Google Sheets and posts them to Facebook
     """
     def __init__(self):
-        self.confessions = google_connector.ConfessionsSheet()
-        try:
-            pass
-            # TODO: Fix
-            # self.confessions.lock()
-        except UnavailableResourseError:
-            raise UnavailableResourseError("Another instance of Confession Manager is running. It must be shut down "
-                    "before running another one")
-
-        self.page = facebook_connector.IDFConfessionsPage()
+        self.confessions = google_integration.ConfessionSheet()
+        self.page = facebook_integration.IDFConfessionsPage()
         self.queue = []
-
-    def __del__(self):
-        try:
-            self.confessions.release()
-            del self.confessions
-        except Exception:
-            pass
 
     def _delete_confessions(self):
         """
         """
         logging.debug("Deleting confessions mark with 'X'")
-        confessions = self.confessions.get_confessions(google_connector.GRAVEYARD_MODE)
+        confessions = self.confessions.get_confessions(google_integration.GRAVEYARD_MODE)
         time.sleep(1)
         self.confessions.move_confessions(confessions, GRAVEYARD_RANGE)
 
     def _archive_confessions(self):
         """
+        Move confessions to the archive table.
         """
         logging.debug("Archiving confessions")
-        confessions = self.confessions.get_confessions(google_connector.ARCHIVE_MODE)
+        confessions = self.confessions.get_confessions(google_integration.ARCHIVE_MODE)
         time.sleep(1)
         self.confessions.move_confessions(confessions, ARCHIVE_RANGE)
 
@@ -82,6 +67,17 @@ class ConfessionManager(object):
         for confession in self.queue:
             self.page.post(confession)
             time.sleep(8)
+
+    def _is_working_hours(self, current_time):
+        """
+        Based on the current time, asses whether its the page's working hours.
+        Our default is 7 AM to 12 AM
+        :param current_time: The current time.
+        :type current_time: datetime.datetime
+        :return: Whether we are currently working.
+        :rtype: bool
+        """
+        return TWELVE_AM >= current_time.hour >= SEVEN_AM
 
     def run(self):
         """
@@ -97,6 +93,11 @@ class ConfessionManager(object):
             try:
                 current_time = datetime.datetime.now()
 
+
+                if self.page.last_post_number % 1000 == 0:
+                    logging.info("Waiting for user posted confession")
+                    continue
+
                 # Delete duplicate posts every 30 minutes
                 time_since_duplicate_deletion = (current_time - last_duplicate_deletion_time).seconds / SECONDS_IN_MINUTE
                 if time_since_duplicate_deletion > DUPLICATE_DELETION_TIMEOUT_MINUTES:
@@ -108,14 +109,14 @@ class ConfessionManager(object):
 
                 # Get confessions to post.
                 if len(self.queue) == 0:
-                    self.queue = self.confessions.get_confessions(google_connector.PUBLISH_MODE)
+                    self.queue = self.confessions.get_confessions(google_integration.PUBLISH_MODE)
 
-                # Check how much time has passed since the last posting session
-                elapsed_time_minutes = (current_time - last_publish_time).seconds / 60
+                # Check how long it's been since the last posting session
+                elapsed_time_minutes = (current_time - last_publish_time).seconds / SECONDS_IN_MINUTE
 
-                if TWELVE_AM >= current_time.hour >= SEVEN_AM and elapsed_time_minutes > offline_queue_timeout_minutes:
+                if self._is_working_hours(current_time) and elapsed_time_minutes > offline_queue_timeout_minutes:
                     # Get confessions from the offline queue
-                    queued_confessions = self.confessions.get_confessions(google_connector.QUEUE_MODE)
+                    queued_confessions = self.confessions.get_confessions(google_integration.QUEUE_MODE)
 
                     # Perform the next steps only if there were queued confessions to prevent waiting too much
                     if len(queued_confessions) != 0:
@@ -144,10 +145,10 @@ class ConfessionManager(object):
                 self.confessions.reconnect()
 
             except KeyboardInterrupt:
-                print "Finishing session..."
+                logging.info("Finishing session...")
                 raise
 
             except Exception as exception:
-                print exception
+                logging.critical(exception)
                 time.sleep(30)
 

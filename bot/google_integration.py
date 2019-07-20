@@ -71,21 +71,14 @@ class Sheet(object):
         """
         self.id = sheet_id
 
-        self.has_lock = False
-        
         # Load credentials file
-        self.credentials = self._get_credentials()
+        self.credentials = Sheet._get_credentials()
 
         # Connect to Google Sheet
         self._connect()
 
-    def __del__(self):
-        """
-        """
-        if self.has_lock:
-            self.release()
-
-    def _get_credentials(self):
+    @staticmethod
+    def _get_credentials():
         """
         Gets valid user credentials from storage. If nothing has been stored, or if the stored credentials are invalid,
         the OAuth2 flow is completed to obtain the new credentials.
@@ -111,6 +104,7 @@ class Sheet(object):
 
     def _connect(self):
         """
+        Connects to Google's sheet services
         """
         logging.info("Connecting to Google Sheets")
 
@@ -121,6 +115,7 @@ class Sheet(object):
 
     def reconnect(self):
         """
+        Reconnect to Google.
         """
         del self.connection
         del self.service
@@ -156,10 +151,12 @@ class Sheet(object):
             "values": data
         }
 
-        self.service.spreadsheets().values().append(spreadsheetId=self.id,
-                                                    range=data_range,
-                                                    valueInputOption=input_option,
-                                                    body=body).execute()
+        self.service.spreadsheets().values().append(
+            spreadsheetId=self.id,
+            range=data_range,
+            valueInputOption=input_option,
+            body=body
+        ).execute()
 
     def delete_rows(self, sheet_id, rows):
         """
@@ -172,7 +169,7 @@ class Sheet(object):
         if len(rows) == 0:
             return None
 
-        # Sort in decending order and remove duplicates
+        # Sort in descending order and remove duplicates
         rows = sorted(list(set(rows)), reverse=True)
 
         body = {
@@ -198,12 +195,14 @@ class Sheet(object):
         self.service.spreadsheets().batchUpdate(spreadsheetId=self.id, body=body).execute()
 
 
-class ConfessionsSheet(Sheet):
+class ConfessionSheet(Sheet):
     """
     A sheet object tailored specifically for the confession spreadsheet.
     """
     def __init__(self):
-        super(ConfessionsSheet, self).__init__(CONFESSIONS_SPREADSHEET_ID)
+        super(ConfessionSheet, self).__init__(CONFESSIONS_SPREADSHEET_ID)
+
+        # TODO: Implement the lock
         self.has_lock = False
 
     def get_confessions(self, mode):
@@ -305,22 +304,3 @@ class ConfessionsSheet(Sheet):
         """
         line_numbers = [confession[LINE_NUMBER_DICT_KEY] for confession in confessions]
         self.delete_rows(CONFESSION_SHEET_ID, line_numbers)
-
-    def lock(self):
-        """
-        """
-        data = self.get_data(LOCK_FORMAT)
-        if not data:
-            self.add_row([[LOCK_DATA]], LOCK_FORMAT)
-            self.has_lock = True
-        else:
-            raise UnavailableResourseError("The lock could not be acquired")
-
-        logging.debug("Lock acquired")
-
-    def release(self):
-        """
-        """
-        self.delete_rows(LOCK_SHEET_ID, [1])
-        self.has_lock = False
-        logging.debug("Lock released")

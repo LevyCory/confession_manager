@@ -1,7 +1,7 @@
 #! /usr/bin/python
 # -*- encoding: utf-8 -*-
 # ==================================================================================================================== #
-# File          : facebook_connector.py
+# File          : facebook_integration.py
 # Purpose       : A client for Facebook pages, providing basic page operations.
 # Author        : Dor Aharonson, Cory Levy
 # Date          : 2017/02/26
@@ -19,7 +19,6 @@ import facebook
 
 HOME_DIRECTORY = os.path.expanduser("~")
 CREDENTIALS_FILE = os.path.expanduser("~/.credentials/facebook/credentials.json")
-CREDENTIALS_FILE = os.path.join(HOME_DIRECTORY, ".credentials", "facebook", "credentials.json")
 CREDENTIALS_PAGE_ACCESS_TOKEN_KEY = "idf_confessions_access_token"
 CREDENTIALS_PAGE_ID_KEY = "page_id"
 
@@ -81,13 +80,13 @@ class IDFConfessionsPage(FacebookPage):
         except OSError:
             raise OSError("Credentials file not found in {path}".format(path=CREDENTIALS_FILE))
 
-        self._last_post_number_cache = None
+        self._last_post_number_cache = 0
 
         super(IDFConfessionsPage, self).__init__(self.credentials[CREDENTIALS_PAGE_ID_KEY],
                                                  self.credentials[CREDENTIALS_PAGE_ACCESS_TOKEN_KEY])
 
     @property
-    def _last_post_number(self):
+    def last_post_number(self):
         """
         @return: The last confession number.
         @rtype: int
@@ -107,7 +106,7 @@ class IDFConfessionsPage(FacebookPage):
         @param confession: The confession to post
         @type confession: dict
         """
-        post_number = self._last_post_number + 1
+        post_number = self.last_post_number + 1
         post = POST_FORMAT.format(post_number=post_number, text=confession["Confession"])
         logging.info("Posting confession #{number}".format(number=post_number))
         super(IDFConfessionsPage, self).post(post)
