@@ -9,6 +9,7 @@
 # ===================================================== IMPORTS ====================================================== #
 
 import os
+import socket
 import logging
 import httplib2
 import datetime
@@ -117,9 +118,13 @@ class Sheet(object):
         """
         Reconnect to Google.
         """
-        del self.connection
-        del self.service
-        self._connect()
+        for i in range(10):
+            try:
+                del self.connection
+                del self.service
+                self._connect()
+            except socket.timeout:
+                pass
 
     def get_data(self, data_range):
         """

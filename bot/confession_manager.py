@@ -93,9 +93,14 @@ class ConfessionManager(object):
             try:
                 current_time = datetime.datetime.now()
 
+<<<<<<< HEAD
 
                 if self.page.last_post_number % 1000 == 0:
                     logging.info("Waiting for user posted confession")
+=======
+                # Check if the next post is a multiply of 1000
+                if (self.page.last_post_number + 1) % 1000 == 0:
+>>>>>>> ce668854c1396aa529229fa4e49260ae96e66ebb
                     continue
 
                 # Delete duplicate posts every 30 minutes
@@ -143,6 +148,7 @@ class ConfessionManager(object):
 
             except socket.timeout:
                 self.confessions.reconnect()
+                self.page.reconnect()
 
             except KeyboardInterrupt:
                 logging.info("Finishing session...")
